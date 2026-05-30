@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="9" fill="#09090b"/>
+  <rect x="2" y="2" width="28" height="28" rx="8" fill="url(#bot-glow)" opacity="0.15"/>
+  <g fill="none" stroke="url(#bot-grad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M16 8V3M12 3h8" />
+    <rect x="6" y="8" width="20" height="15" rx="3" />
+    <circle cx="11.5" cy="14.5" r="1.5" fill="url(#bot-grad)" />
+    <circle cx="20.5" cy="14.5" r="1.5" fill="url(#bot-grad)" />
+    <path d="M12 19c1.5 1 2.5 1 4 0" stroke-width="2" />
+    <path d="M6 15.5H4M26 15.5h2" />
+  </g>
+  <defs>
+    <linearGradient id="bot-glow" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#14b8a6"/>
+    </linearGradient>
+    <linearGradient id="bot-grad" x1="6" y1="3" x2="26" y2="23" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#34d399"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+  </defs>
+</svg>

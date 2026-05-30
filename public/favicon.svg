@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <g fill="none" stroke="url(#bot-grad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Antenna: from head (y=10.5) to top (y=2), then left (to x=11) -->
+    <path d="M16 10.5V2h-5" />
+    <!-- Main head/body rect -->
+    <rect x="5" y="10.5" width="22" height="18" rx="3.5" />
+    <!-- Left ear and right ear -->
+    <path d="M5 19.5H2M27 19.5h3" />
+    <!-- Left eye and right eye -->
+    <path d="M12 17v4M20 17v4" />
+  </g>
+  <defs>
+    <linearGradient id="bot-grad" x1="5" y1="2" x2="27" y2="28.5" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#34d399"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+  </defs>
+</svg>
