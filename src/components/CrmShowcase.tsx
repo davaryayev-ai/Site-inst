@@ -12,27 +12,27 @@ export default function CrmShowcase() {
         {/* Texts explaining CRM Integration */}
         <div className="lg:col-span-5 space-y-6">
           <span className="text-xs font-mono text-zinc-600 uppercase tracking-widest bg-zinc-100 border border-zinc-200 px-3 py-1 rounded-full">
-            amoCRM & Битрикс24
+            Гибкая интеграция
           </span>
           <h3 className="text-2xl sm:text-3xl font-display font-bold text-zinc-900 leading-tight">
-            Полная автоматизация воронки — от лида до записи в Астане
+            Синхронизация данных с вашей CRM-системой
           </h3>
           <p className="text-sm sm:text-base text-zinc-500 font-sans leading-relaxed font-light">
-            Как только родитель в Астане пишет в WhatsApp, Instagram или Telegram, наш ИИ-агент подхватывает диалог и самостоятельно ведет сделку по вашей воронке. Без задержек, без ошибок человеческого фактора.
+            ИИ-агент умеет передавать результаты переписки и статус готовности клиента напрямую в вашу рабочую CRM (amoCRM, Битрикс24 или Мой Класс). Мы настраиваем логику интеграции индивидуально под ваши бизнес-процессы.
           </p>
 
           <ul className="space-y-3 pt-2 font-sans text-xs sm:text-sm text-zinc-700">
             <li className="flex items-start gap-2">
               <span className="mt-1 text-zinc-900 shrink-0">📊</span>
-              <span><strong>Мгновенное создание сделки:</strong> Бот автоматически заводит карточку в CRM в нужной воронке со всеми метками рекламы (UTM tags).</span>
+              <span><strong>Создание сделок по API:</strong> Возможность настройки автоматического заведения карточки клиента при первом обращении через вебхуки, чтобы не терять контакты.</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="mt-1 text-zinc-900 shrink-0">🤖</span>
-              <span><strong>Умный парсинг сущностей:</strong> Записывает имя мамы, имя ребенка, возраст и выбранный курс в соответствующие поля CRM.</span>
+              <span><strong>Сбор ключевых данных:</strong> ИИ-ассистент аккуратно вычленяет из переписки имя родителя, имя ребенка, возраст и передает их менеджеру для быстрого старта.</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="mt-1 text-zinc-900 shrink-0">📅</span>
-              <span><strong>Запись в календарь:</strong> Интегрируется со свободным расписанием педагогов прямо в вашей CRM и высылает подтверждения на WhatsApp.</span>
+              <span><strong>Облегчение работы администратора:</strong> Бот доводит клиента до согласия записаться и выявляет удобное время, избавляя сотрудников от рутинного анкетирования.</span>
             </li>
           </ul>
 
