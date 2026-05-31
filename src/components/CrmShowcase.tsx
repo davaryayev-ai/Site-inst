@@ -134,7 +134,7 @@ export default function CrmShowcase() {
                 {/* Simulated Conversation Log snippet inside CRM */}
                 <div className="space-y-2">
                   <p className="text-[11px] font-mono text-zinc-400 uppercase tracking-widest flex items-center gap-1.5">
-                    <MessageSquare size={12} /> Запись WhatsApp диалога ИИ в CRM:
+                    <MessageSquare size={12} /> История переписки с родителем:
                   </p>
                   <div className="bg-zinc-50 rounded-xl p-3 border border-zinc-200 text-xs font-mono space-y-2 text-zinc-700">
                     <div className="flex items-start gap-1">
