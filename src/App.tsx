@@ -58,7 +58,7 @@ export default function App() {
             <Bot className="text-emerald-600 stroke-[2.2] shrink-0" size={28} />
             <div>
               <span className="font-display font-bold text-base tracking-tight text-zinc-950 block">
-                LeadFlow
+                LearnFlow
               </span>
               <span className="text-[10px] text-zinc-550 uppercase font-mono tracking-widest block -mt-1 font-bold">
                 детские центры в РК • 24/7
@@ -143,8 +143,8 @@ export default function App() {
               <span className="relative inline-flex rounded-full h-2 w-2 bg-zinc-800"></span>
             </span>
             <span className="text-[11px] font-mono text-zinc-700 uppercase tracking-wider font-semibold">
-              LeadFlow • Продажи обучения 24/7
-            </span>
+                LearnFlow • Продажи обучения 24/7
+              </span>
           </div>
 
           <div className="space-y-4 max-w-5xl mx-auto">
@@ -320,7 +320,7 @@ export default function App() {
           <div className="space-y-1 text-center md:text-left">
             <div className="flex items-center justify-center md:justify-start gap-2">
               <Bot className="text-zinc-800" size={14} />
-              <span className="text-zinc-900 font-display font-bold text-sm tracking-tight">LeadFlow</span>
+              <span className="text-zinc-900 font-display font-bold text-sm tracking-tight">LearnFlow</span>
             </div>
             <p className="text-[10px] text-zinc-400 font-mono">АВТОНОМНЫЕ СИСТЕМЫ ПРОДАЖ ДЛЯ СФЕРЫ ОБРАЗОВАНИЯ В КАЗАХСТАНЕ</p>
           </div>
@@ -334,7 +334,7 @@ export default function App() {
           </div>
 
           <p className="text-[10px] text-zinc-400 font-mono text-center md:text-right">
-            © 2026 LeadFlow. Все права защищены.<br />
+            © 2026 LearnFlow. Все права защищены.<br />
             Настроено в Астане &middot; Интеграция под ключ за 3 суток
           </p>
         </div>
