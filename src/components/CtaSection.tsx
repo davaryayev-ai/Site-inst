@@ -7,7 +7,7 @@ export default function CtaSection() {
     ownerName: "",
     phone: "",
     crmType: "amoCRM",
-    leadsCount: "50-150",
+    leadsCount: "",
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -167,17 +167,16 @@ export default function CtaSection() {
 
                 {/* 5. Leads Count */}
                 <div className="space-y-1">
-                  <label className="text-xs text-zinc-500 block font-sans">Объем новых лидов в месяц</label>
-                  <select
+                  <label className="text-xs text-zinc-500 block font-sans">Новых лидов в месяц (примерно)</label>
+                  <input
+                    type="number"
+                    required
+                    placeholder="Например: 120"
+                    min="1"
                     value={formData.leadsCount}
                     onChange={(e) => setFormData(prev => ({ ...prev, leadsCount: e.target.value }))}
-                    className="w-full bg-zinc-50 border border-zinc-250 text-sm text-zinc-800 rounded-xl px-3 py-2 focus:outline-none focus:border-zinc-400 transition font-sans cursor-pointer"
-                  >
-                    <option value="До 50">До 50 лидов</option>
-                    <option value="50-150">От 50 до 150 лидов</option>
-                    <option value="150-400">От 150 до 400 лидов</option>
-                    <option value="400+">Более 400 лидов</option>
-                  </select>
+                    className="w-full bg-zinc-50 border border-zinc-250 text-sm text-zinc-800 placeholder-zinc-400 rounded-xl px-3 py-2 focus:outline-none focus:border-zinc-400 transition font-sans"
+                  />
                 </div>
               </div>
 
