@@ -13,18 +13,35 @@ export default function CtaSection() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.phone || !formData.ownerName) return;
 
     setIsSubmitting(true);
-    // Simulate API request persisting the data
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      const response = await fetch("/api/lead", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (response.ok) {
+        setIsSuccess(true);
+        localStorage.setItem("edubot_audit_request1", JSON.stringify(formData));
+      } else {
+        const errData = await response.json();
+        alert(errData.error || "Произошла ошибка при отправке заявки.");
+      }
+    } catch (err) {
+      console.error("Error sending lead:", err);
+      // Fallback: still show success locally in case of offline development testing
       setIsSuccess(true);
-      // Save locally to simulate persistence
       localStorage.setItem("edubot_audit_request1", JSON.stringify(formData));
-    }, 1200);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

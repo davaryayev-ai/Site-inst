@@ -56,6 +56,46 @@ export default function AIAgentChat() {
     }
   }, [messages]);
 
+  const logSentRef = useRef(false);
+
+  // Send completed chat logs to Telegram when user is booked
+  useEffect(() => {
+    if (crmData.bookingStatus === "Записан на пробный! ✅" && !logSentRef.current && messages.length > 1) {
+      logSentRef.current = true;
+      
+      // Determine direction (programming, robotics, english) from conversation history
+      let direction = "Не определено";
+      const fullText = messages.map(m => m.text).join(" ").toLowerCase();
+      if (fullText.includes("робот") || fullText.includes("робототехник")) {
+        direction = "Робототехника";
+      } else if (fullText.includes("программиров") || fullText.includes("код")) {
+        direction = "Программирование";
+      } else if (fullText.includes("английск") || fullText.includes("english") || fullText.includes("англ")) {
+        direction = "Английский язык";
+      }
+
+      fetch("/api/chat-log", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          parentName: crmData.parentName,
+          childName: crmData.childName,
+          childAge: crmData.childAge,
+          bookingStatus: crmData.bookingStatus,
+          direction: direction,
+          messages: messages.map(m => ({ sender: m.sender, text: m.text })),
+        }),
+      }).catch(err => console.error("Error sending chat log:", err));
+    }
+    
+    // Reset the ref if messages are cleared or reset to initial welcome message
+    if (messages.length <= 1) {
+      logSentRef.current = false;
+    }
+  }, [crmData.bookingStatus, messages]);
+
   // Analyze conversation on message changes to simulate CRM extraction
   useEffect(() => {
     if (messages.length <= 1) return;
