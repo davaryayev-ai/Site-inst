@@ -64,8 +64,8 @@ export default function CtaSection() {
           <div className="bg-white rounded-xl p-4 border border-zinc-200 text-xs font-mono text-left space-y-2 text-zinc-650 shadow-2xs">
             <p className="font-semibold text-zinc-900 border-b border-zinc-100 pb-1.5">📝 План следующих шагов:</p>
             <p>1. Наш ведущий ИИ-интегратор свяжется с вами по номеру <strong className="text-zinc-900">{formData.phone}</strong> (через Telegram/WhatsApp) в течение 15 минут в рабочее время Астаны.</p>
-            <p>2. Мы согласуем удобное время для короткого 12-минутного созвона в Google Meet или Zoom.</p>
-            <p>3. На встрече мы продемонстрируем индивидуальный демо-сценарий ИИ-ассистента, разработанный конкретно под ваши направления.</p>
+            <p>2. Мы согласуем удобное время для короткой онлайн-консультации в Google Meet или Zoom.</p>
+            <p>3. На созвоне мы ответим на ваши вопросы и на живых примерах покажем, как ИИ-ассистент автоматизирует продажи и работу с CRM.</p>
           </div>
           <button
             onClick={() => setIsSuccess(false)}
@@ -87,14 +87,14 @@ export default function CtaSection() {
               Спасите упускаемую выгоду в Астане за 3 дня
             </h2>
             <p className="text-sm sm:text-base text-zinc-550 font-sans font-light leading-relaxed">
-              Заполните простую форму справа. Наш эксперт проведет полный технический аудит вашей текущей воронки продаж, выявит слепые зоны в WhatsApp и соберет <strong>индивидуальный тестовый сценарий ИИ-Агента</strong> конкретно под специфику вашего детского центра — абсолютно бесплатно.
+              Заполните простую форму справа. Наш эксперт проведет полный технический аудит вашей текущей воронки продаж, выявит слепые зоны в WhatsApp и подберет оптимальный сценарий автоматизации ИИ-Агента под специфику вашего детского центра — абсолютно бесплатно.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 font-sans text-xs">
               <div className="flex items-center gap-2.5 bg-white border border-zinc-200 px-4 py-3 rounded-xl shadow-2xs">
                 <Calendar className="text-zinc-700 font-bold" size={18} />
                 <div>
-                  <p className="text-zinc-900 font-semibold">12 минут созвон</p>
+                  <p className="text-zinc-900 font-semibold">Созвон-консультация</p>
                   <p className="text-zinc-500">Практические рекомендации</p>
                 </div>
               </div>
