@@ -63,15 +63,18 @@ export default function AIAgentChat() {
     if (crmData.bookingStatus === "Записан на пробный! ✅" && !logSentRef.current && messages.length > 1) {
       logSentRef.current = true;
       
-      // Determine direction (programming, robotics, english) from conversation history
+      // Determine direction (programming, robotics, english) from USER messages only
+      // (bot's welcome message mentions all directions, so scanning it would always match "робот" first)
       let direction = "Не определено";
-      const fullText = messages.map(m => m.text).join(" ").toLowerCase();
-      if (fullText.includes("робот") || fullText.includes("робототехник")) {
-        direction = "Робототехника";
-      } else if (fullText.includes("программиров") || fullText.includes("код")) {
-        direction = "Программирование";
-      } else if (fullText.includes("английск") || fullText.includes("english") || fullText.includes("англ")) {
+      const userText = messages.filter(m => m.sender === "user").map(m => m.text).join(" ").toLowerCase();
+      if (userText.includes("английск") || userText.includes("english") || userText.includes("англ")) {
         direction = "Английский язык";
+      } else if (userText.includes("программиров") || userText.includes("код") || userText.includes("scratch") || userText.includes("python")) {
+        direction = "Программирование";
+      } else if (userText.includes("робот") || userText.includes("робототехник")) {
+        direction = "Робототехника";
+      } else if (userText.includes("подготовк") || userText.includes("школ")) {
+        direction = "Подготовка к школе";
       }
 
       fetch("/api/chat-log", {
