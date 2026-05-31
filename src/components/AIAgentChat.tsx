@@ -195,13 +195,19 @@ export default function AIAgentChat() {
     }
 
     // Scan all model messages in history for name addressing patterns (e.g. "Спасибо, Давид!" or "Отлично, Давид!")
+    // IMPORTANT: Skip if the detected name matches the child's name (prevents AI mistake of addressing parent by child's name)
     for (const msg of messages) {
       if (msg.sender === "model") {
         const addressMatch = msg.text.match(/(?:Спасибо|Отлично|Здравствуйте|Привет|Очень приятно|Рад познакомить|Рада познакомить|Приветствую),\s+([А-ЯЁA-Zа-яёa-z\-]+)/i);
         if (addressMatch && addressMatch[1]) {
           const cand = addressMatch[1].trim().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g, "");
           if (cand.length >= 2 && !nameExclusions.includes(cand.toLowerCase())) {
-            name = cand.charAt(0).toUpperCase() + cand.slice(1).toLowerCase();
+            const candNormalized = cand.charAt(0).toUpperCase() + cand.slice(1).toLowerCase();
+            // Don't set parent name if it matches the child's name (AI may have confused them)
+            if (childName !== "Не указано" && candNormalized.toLowerCase() === childName.toLowerCase()) {
+              continue;
+            }
+            name = candNormalized;
             break;
           }
         }
