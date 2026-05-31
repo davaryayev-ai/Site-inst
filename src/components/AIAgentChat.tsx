@@ -433,7 +433,7 @@ export default function AIAgentChat() {
       </div>
 
       {/* 2. Interactive Chat Terminal Mockup (8 Columns) - Styled as a premium smartphone with WhatsApp */}
-      <div className="lg:col-span-8 flex justify-center items-center w-full py-4">
+      <div className="lg:col-span-8 flex flex-col items-center justify-center w-full py-4 gap-4">
         <div className="w-full max-w-[360px] h-[640px] bg-zinc-900 p-1.5 rounded-[28px] shadow-2xl border-2 border-zinc-800 flex flex-col relative shrink-0">
           
           {/* Phone Notch & Speaker */}
@@ -600,6 +600,9 @@ export default function AIAgentChat() {
 
           </div>
         </div>
+        <p className="text-[10px] text-zinc-400 font-sans italic text-center max-w-[320px] leading-relaxed select-none">
+          * Сценарий переписки ИИ-агента, алгоритмы ответов на возражения и интеграция с вашей CRM-системой настраиваются опционально под любые задачи вашего бизнеса.
+        </p>
       </div>
     </div>
   );
