@@ -193,7 +193,7 @@ async function startServer() {
           { role: "system", content: systemInstruction },
           ...formattedMessages,
         ],
-        temperature: 0.8,
+        temperature: 0.5,
         max_tokens: 500,
       });
 

@@ -160,15 +160,8 @@ export default function AIAgentChat() {
       age = `${childMatch[2]} лет`;
     }
 
-    // Detect child name in text if mentioned with keywords
-    const nameKeywords = /(?:зовут|имя|сын|сына|доч(?:ь|ка|ку)|ребен(?:ок|ка))\s+([а-яёa-z]+)/i;
-    const nameMatch = lastUserMsg.match(nameKeywords);
-    if (nameMatch && nameMatch[1]) {
-      childName = nameMatch[1].charAt(0).toUpperCase() + nameMatch[1].slice(1);
-    }
-
-    // Detect parent's name
-    const parentKeywords = /(?:меня зовут|это|я|родитель|мама|папа)\s+([а-яёa-z]+)/i;
+    // Detect parent's name FIRST (must run before child name detection)
+    const parentKeywords = /(?:меня зовут|мое имя|я\s+[-—]\s*|я\s+)([а-яёa-z]+)/i;
     const parentMatch = lastUserMsg.match(parentKeywords);
     if (parentMatch && parentMatch[1]) {
       const nameCand = parentMatch[1].toLowerCase();
@@ -177,8 +170,23 @@ export default function AIAgentChat() {
       }
     }
 
+    // Detect child name in text if mentioned with child-specific keywords
+    // IMPORTANT: Skip if the message is about the parent ("меня зовут", "я [name]") 
+    const isParentIntro = /(?:меня зовут|мое имя|я\s+[-—])/i.test(lastUserMsg);
+    if (!isParentIntro) {
+      const nameKeywords = /(?:зовут|имя|сын|сына|доч(?:ь|ка|ку)|ребен(?:ок|ка))\s+([а-яёa-z]+)/i;
+      const nameMatch = lastUserMsg.match(nameKeywords);
+      if (nameMatch && nameMatch[1]) {
+        const childCand = nameMatch[1].charAt(0).toUpperCase() + nameMatch[1].slice(1);
+        // Don't set child name to be the same as parent name
+        if (childCand.toLowerCase() !== name.toLowerCase() || name === "В процессе определения...") {
+          childName = childCand;
+        }
+      }
+    }
+
     // Generic short-message name parser fallback (e.g. "Настя, англ")
-    if ((name === "В процессе определения..." || childName === "Не указано") && !nameMatch && !parentMatch) {
+    if ((name === "В процессе определения..." || childName === "Не указано") && !isParentIntro && !parentMatch) {
       const words = lastUserMsg.split(/[^a-zа-яё\-]+/i).filter(w => w.length >= 2);
       const potentialName = words.find(w => !nameExclusions.includes(w.toLowerCase()));
       if (potentialName) {
