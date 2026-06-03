@@ -225,7 +225,19 @@ export default function AIAgentChat() {
       }
     }
 
-    // Detect child age
+    // Detect child age (supports both digits and Russian number words)
+    const numberWords: Record<string, number> = {
+      "один": 1, "одного": 1, "два": 2, "двух": 2, "три": 3, "трёх": 3, "трех": 3,
+      "четыре": 4, "четырёх": 4, "четырех": 4, "пять": 5, "пяти": 5,
+      "шесть": 6, "шести": 6, "семь": 7, "семи": 7, "восемь": 8, "восьми": 8,
+      "девять": 9, "девяти": 9, "десять": 10, "десяти": 10,
+      "одиннадцать": 11, "одиннадцати": 11, "двенадцать": 12, "двенадцати": 12,
+      "тринадцать": 13, "тринадцати": 13, "четырнадцать": 14, "четырнадцати": 14,
+      "пятнадцать": 15, "пятнадцати": 15, "шестнадцать": 16, "семнадцать": 17,
+      "восемнадцать": 18
+    };
+
+    // Try digit-based age detection first
     const ageMatch = lastUserMsg.match(/(\d+)\s*(?:лет|года|мес)/i);
     if (ageMatch) {
       age = `${ageMatch[1]} лет`;
@@ -233,6 +245,22 @@ export default function AIAgentChat() {
       const numMatch = lastUserMsg.match(/\b(\d{1,2})\b/);
       if (numMatch) {
         age = `${numMatch[1]} лет`;
+      } else {
+        // Try word-based age detection (e.g. "десять", "семь")
+        const lowerMsg = lastUserMsg.toLowerCase().trim();
+        for (const [word, num] of Object.entries(numberWords)) {
+          if (lowerMsg.includes(word)) {
+            age = `${num} лет`;
+            break;
+          }
+        }
+      }
+    } else {
+      // Even without context question, try to detect standalone word numbers as age
+      const lowerMsg = lastUserMsg.toLowerCase().trim();
+      const singleWordMsg = lowerMsg.replace(/[^а-яёa-z0-9]/gi, "");
+      if (numberWords[singleWordMsg] !== undefined) {
+        age = `${numberWords[singleWordMsg]} лет`;
       }
     }
 
