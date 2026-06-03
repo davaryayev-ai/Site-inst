@@ -201,7 +201,93 @@ async function startServer() {
         max_tokens: 500,
       });
 
-      const replyText = response.choices[0].message.content || "Извините, произошла ошибка генерации ответа. Пожалуйста, попробуйте еще раз.";
+      let replyText = response.choices[0].message.content || "Извините, произошла ошибка генерации ответа. Пожалуйста, попробуйте еще раз.";
+
+      // ============================================================
+      // PROGRAMMATIC DATA COMPLETENESS CHECK (SAFETY NET)
+      // If AI tries to confirm booking but data is incomplete,
+      // replace response with a question about missing data.
+      // This is a CODE-LEVEL guarantee the AI cannot bypass.
+      // ============================================================
+      const bookingKeywords = /(?:записали|записала|записал|запишем|забронировали|забронировала|забронируем|подтвержда|ждем вас|ждём вас|жду вас|встретим|до встречи)/i;
+      const isBookingConfirmation = bookingKeywords.test(replyText);
+
+      if (isBookingConfirmation) {
+        // Extract known data from ALL messages in conversation
+        const allText = messages.map((m: any) => m.text).join(" ");
+        const userTexts = messages.filter((m: any) => m.sender === "user").map((m: any) => m.text);
+        const modelTexts = messages.filter((m: any) => m.sender === "model").map((m: any) => m.text);
+        const allUserText = userTexts.join(" ").toLowerCase();
+        const allModelText = modelTexts.join(" ").toLowerCase();
+
+        // Check parent name: did the bot address someone by name? Or did user introduce themselves?
+        const parentIntro = allText.match(/(?:меня зовут|я\s+[-—]\s*)([а-яёa-z]+)/i);
+        const botAddressed = allModelText.match(/(?:спасибо|отлично|здравствуйте|привет|хорошо|записала),?\s+([а-яёa-z]+)/i);
+        const hasParentName = !!(parentIntro || botAddressed);
+
+        // Check child name
+        const childNamePatterns = [
+          /(?:ребенка|ребёнка|дочь|дочка|дочку|сын|сына)\s+(?:зовут\s+)?([а-яёa-z]+)/i,
+          /зовут\s+(?:моего\s+(?:ребенка|ребёнка|сына|дочь|дочку)\s+)?([а-яёa-z]+)/i
+        ];
+        let hasChildName = false;
+        // Check if bot asked "как зовут ребенка" and user replied with a name
+        const botAskedChildName = allModelText.match(/как зовут.{0,20}(?:ребенк|дочь|дочк|сын)/i);
+        if (botAskedChildName) {
+          // Find user message AFTER this bot question
+          let foundQuestion = false;
+          for (const msg of messages) {
+            if (msg.sender === "model" && /как зовут.{0,20}(?:ребенк|дочь|дочк|сын)/i.test(msg.text.toLowerCase())) {
+              foundQuestion = true;
+            } else if (foundQuestion && msg.sender === "user") {
+              const cleanReply = msg.text.trim();
+              if (cleanReply.length >= 2 && cleanReply.length <= 30 && /^[а-яёa-z\s-]+$/i.test(cleanReply)) {
+                hasChildName = true;
+              }
+              break;
+            }
+          }
+        }
+        // Also check with patterns
+        for (const pattern of childNamePatterns) {
+          if (pattern.test(allText)) {
+            hasChildName = true;
+            break;
+          }
+        }
+
+        // Check child age
+        const ageWords = ["один","два","три","четыре","пять","шесть","семь","восемь","девять","десять","одиннадцать","двенадцать","тринадцать","четырнадцать","пятнадцать","шестнадцать","семнадцать","восемнадцать"];
+        const hasAge = /\d+\s*(?:лет|года|год|мес)/i.test(allUserText) 
+          || /\b\d{1,2}\b/.test(allUserText.replace(/[^\dа-яё\s]/g, ""))
+          || ageWords.some(w => allUserText.includes(w));
+
+        // Check direction
+        const hasDirection = /английск|english|англ|программиров|scratch|python|робот|робототехник|подготовк.*школ/i.test(allUserText);
+
+        // Build list of missing parameters
+        const missing: string[] = [];
+        if (!hasParentName) missing.push("parent_name");
+        if (!hasChildName) missing.push("child_name");
+        if (!hasAge) missing.push("child_age");
+        if (!hasDirection) missing.push("direction");
+
+        if (missing.length > 0) {
+          // REPLACE the AI's booking confirmation with a question about missing data
+          const parentName = botAddressed?.[1] || parentIntro?.[1] || "";
+          const greeting = parentName ? `${parentName.charAt(0).toUpperCase() + parentName.slice(1)}, ` : "";
+          
+          const questions: Record<string, string> = {
+            parent_name: "Как я могу к вам обращаться?",
+            child_name: "Как зовут вашего ребенка?",
+            child_age: "Сколько лет вашему ребенку?",
+            direction: "Какое направление вас интересует: английский, программирование, робототехника или подготовка к школе?"
+          };
+
+          const firstMissing = missing[0];
+          replyText = `${greeting}с удовольствием запишу! Но мне нужно уточнить ещё кое-что. ${questions[firstMissing]}`;
+        }
+      }
 
       res.json({ reply: replyText });
     } catch (error: any) {
