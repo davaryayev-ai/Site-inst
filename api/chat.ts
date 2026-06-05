@@ -195,9 +195,28 @@ export default async function handler(req: any, res: any) {
       const allUserText = userTexts.join(" ").toLowerCase();
       const allModelText = modelTexts.join(" ").toLowerCase();
 
-      const parentIntro = allText.match(/(?:меня зовут|я\s+[-—]\s*)([а-яёa-z]+)/i);
+      // Check parent name: search USER messages ONLY to avoid matching bot's "Я — ИИ-ассистент"
+      const allUserTextRaw = userTexts.join(" ");
+      const parentIntro = allUserTextRaw.match(/(?:меня зовут|мое имя)\s+([а-яёa-z]+)/i);
       const botAddressed = allModelText.match(/(?:спасибо|отлично|здравствуйте|привет|хорошо|записала),?\s+([а-яёa-z]+)/i);
-      const hasParentName = !!(parentIntro || botAddressed);
+      
+      // Context-aware: if bot asked "обращаться/как зовут" and user replied with a name
+      let contextParentName = false;
+      for (let i = 0; i < messages.length - 1; i++) {
+        const msg = messages[i];
+        const nextMsg = messages[i + 1];
+        if (msg.sender === "model" && nextMsg.sender === "user") {
+          const q = msg.text.toLowerCase();
+          if (q.includes("обращаться") || q.includes("как вас зовут") || q.includes("ваше имя")) {
+            const reply = nextMsg.text.trim();
+            if (reply.length >= 2 && reply.length <= 30 && /^[а-яёa-z\s-]+$/i.test(reply)) {
+              contextParentName = true;
+            }
+          }
+        }
+      }
+      
+      const hasParentName = !!(parentIntro || botAddressed || contextParentName);
 
       const childNamePatterns = [
         /(?:ребенка|ребёнка|дочь|дочка|дочку|сын|сына)\s+(?:зовут\s+)?([а-яёa-z]+)/i,
@@ -237,8 +256,22 @@ export default async function handler(req: any, res: any) {
       if (!hasDirection) missing.push("direction");
 
       if (missing.length > 0) {
-        const parentName = botAddressed?.[1] || parentIntro?.[1] || "";
-        const greeting = parentName ? `${parentName.charAt(0).toUpperCase() + parentName.slice(1)}, ` : "";
+        // Extract actual parent name for greeting
+        let detectedParentName = botAddressed?.[1] || parentIntro?.[1] || "";
+        if (!detectedParentName && contextParentName) {
+          for (let i = 0; i < messages.length - 1; i++) {
+            const msg = messages[i];
+            const nextMsg = messages[i + 1];
+            if (msg.sender === "model" && nextMsg.sender === "user") {
+              const q = msg.text.toLowerCase();
+              if (q.includes("обращаться") || q.includes("как вас зовут") || q.includes("ваше имя")) {
+                detectedParentName = nextMsg.text.trim();
+                break;
+              }
+            }
+          }
+        }
+        const greeting = detectedParentName ? `${detectedParentName.charAt(0).toUpperCase() + detectedParentName.slice(1).toLowerCase()}, ` : "";
         
         const questions: Record<string, string> = {
           parent_name: "Как я могу к вам обращаться?",

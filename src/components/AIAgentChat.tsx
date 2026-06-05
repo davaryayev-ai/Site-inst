@@ -125,7 +125,7 @@ export default function AIAgentChat() {
     // Single-word context-aware parsing
     const cleanMsg = lastUserMsg.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g, "").trim();
     const isSingleWord = /^[a-zа-яё\-]+$/i.test(cleanMsg);
-    const isAskingParentName = questionText.includes("как вас зовут") || questionText.includes("как зовут вас") || questionText.includes("ваше имя") || questionText.includes("представиться");
+    const isAskingParentName = questionText.includes("как вас зовут") || questionText.includes("как зовут вас") || questionText.includes("ваше имя") || questionText.includes("представиться") || questionText.includes("обращаться") || questionText.includes("как могу") || questionText.includes("ваше имя");
     const isAskingChildName = (questionText.includes("как зовут") || questionText.includes("имя")) && !isAskingParentName;
     
     const commonExclusions = ["давайте", "да", "нет", "хочу", "запишите", "будние", "выходные", "субботу", "воскресенье", "завтра", "сегодня", "наверное", "пожалуй"];
