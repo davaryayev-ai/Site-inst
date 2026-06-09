@@ -185,8 +185,10 @@ export default async function handler(req: any, res: any) {
     // replace response with a question about missing data.
     // This is a CODE-LEVEL guarantee the AI cannot bypass.
     // ============================================================
-    const bookingKeywords = /(?:записали|записала|записал|запишем|забронировали|забронировала|забронируем|подтвержда|ждем вас|ждём вас|жду вас|встретим|до встречи)/i;
-    const isBookingConfirmation = bookingKeywords.test(replyText);
+    // Only match REAL booking confirmations, not simple acknowledgements like "Записала, Давид!"
+    const bookingWithContext = /(?:записали|записала|записал|запишем|забронировали|забронировала|забронируем)\s+(?:на|вас|ваш|вашего|тебя|ребенка|ребёнка)/i;
+    const confirmationPhrases = /(?:подтвержда|ждем вас|ждём вас|жду вас|встретим|до встречи|увидимся|приходите на)/i;
+    const isBookingConfirmation = bookingWithContext.test(replyText) || confirmationPhrases.test(replyText);
 
     if (isBookingConfirmation) {
       const allText = messages.map((m: any) => m.text).join(" ");
@@ -281,7 +283,7 @@ export default async function handler(req: any, res: any) {
         };
 
         const firstMissing = missing[0];
-        replyText = `${greeting}с удовольствием запишу! Но мне нужно уточнить ещё кое-что. ${questions[firstMissing]}`;
+        replyText = `${greeting}подскажите, пожалуйста, ещё кое-что. ${questions[firstMissing]}`;
       }
     }
 
