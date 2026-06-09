@@ -99,170 +99,15 @@ export default function AIAgentChat() {
     }
   }, [crmData.bookingStatus, messages]);
 
-  // Analyze conversation on message changes to simulate CRM extraction
+  // Analyze conversation for objection detection and booking status only
+  // Name, child name, age, and direction come from server-side Extraction LLM
   useEffect(() => {
     if (messages.length <= 1) return;
 
     const lastUserMsg = [...messages].reverse().find(m => m.sender === "user")?.text.toLowerCase() || "";
 
-    let name = crmData.parentName;
-    let childName = crmData.childName || "Не указано";
-    let age = crmData.childAge;
     let objection = crmData.detectedObjection;
     let status = crmData.bookingStatus;
-
-    // Detect prompt/question context from previous model message before user's response
-    const reversedMessages = [...messages].reverse();
-    const lastUserMsgIndex = reversedMessages.findIndex(m => m.sender === "user");
-    let questionText = "";
-    if (lastUserMsgIndex !== -1) {
-      const priorModelMsg = reversedMessages.slice(lastUserMsgIndex + 1).find(m => m.sender === "model");
-      if (priorModelMsg) {
-        questionText = priorModelMsg.text.toLowerCase();
-      }
-    }
-
-    // Single-word context-aware parsing
-    const cleanMsg = lastUserMsg.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g, "").trim();
-    const isSingleWord = /^[a-zа-яё\-]+$/i.test(cleanMsg);
-    const isAskingParentName = questionText.includes("как вас зовут") || questionText.includes("как зовут вас") || questionText.includes("ваше имя") || questionText.includes("представиться") || questionText.includes("обращаться") || questionText.includes("как могу") || questionText.includes("ваше имя");
-    const isAskingChildName = (questionText.includes("как зовут") || questionText.includes("имя")) && !isAskingParentName;
-    
-    const commonExclusions = ["давайте", "да", "нет", "хочу", "запишите", "будние", "выходные", "субботу", "воскресенье", "завтра", "сегодня", "наверное", "пожалуй"];
-    const nameExclusions = [
-      ...commonExclusions,
-      "англ", "английский", "английскому", "английским", 
-      "робот", "робототехника", "робототехнику",
-      "программирование", "программированию",
-      "подготовка", "подготовку",
-      "школа", "школе", "школу",
-      "курс", "курсы", "курсах",
-      "лет", "года", "год",
-      "меня", "тебя", "его", "ее", "её", "было", "будет",
-      "мама", "папа", "дочь", "дочка", "дочку", "сын", "сына", "ребенок", "ребенка",
-      "здравствуйте", "привет", "добрый", "день", "вечер", "утро", "салем", "салемсуз", "здравствуй", "приветик",
-      "добрыйдень", "добрыйвечер", "доброеутро", "сәлем"
-    ];
-
-    if (isSingleWord && !nameExclusions.includes(cleanMsg.toLowerCase())) {
-      const capitalized = cleanMsg.charAt(0).toUpperCase() + cleanMsg.slice(1).toLowerCase();
-      if (isAskingParentName) {
-        name = capitalized;
-      } else if (isAskingChildName) {
-        childName = capitalized;
-      }
-    }
-
-    // Detect child name and age together like "Данияр 10 лет"
-    const childMatch = lastUserMsg.match(/([а-яёa-z]+)\s+(\d+)\s*(?:лет|года|мес)/i);
-    if (childMatch && childMatch[1] && childMatch[2]) {
-      childName = childMatch[1].charAt(0).toUpperCase() + childMatch[1].slice(1);
-      age = `${childMatch[2]} лет`;
-    }
-
-    // Detect parent's name FIRST (must run before child name detection)
-    const parentKeywords = /(?:меня зовут|мое имя|я\s+[-—]\s*|я\s+)([а-яёa-z]+)/i;
-    const parentMatch = lastUserMsg.match(parentKeywords);
-    if (parentMatch && parentMatch[1]) {
-      const nameCand = parentMatch[1].toLowerCase();
-      if (!nameExclusions.includes(nameCand)) {
-        name = parentMatch[1].charAt(0).toUpperCase() + parentMatch[1].slice(1);
-      }
-    }
-
-    // Detect child name in text if mentioned with child-specific keywords
-    // IMPORTANT: Skip if the message is about the parent ("меня зовут", "я [name]") 
-    const isParentIntro = /(?:меня зовут|мое имя|я\s+[-—])/i.test(lastUserMsg);
-    if (!isParentIntro) {
-      const nameKeywords = /(?:зовут|имя|сын|сына|доч(?:ь|ка|ку)|ребен(?:ок|ка))\s+([а-яёa-z]+)/i;
-      const nameMatch = lastUserMsg.match(nameKeywords);
-      if (nameMatch && nameMatch[1]) {
-        const childCand = nameMatch[1].charAt(0).toUpperCase() + nameMatch[1].slice(1);
-        // Don't set child name to be the same as parent name
-        if (childCand.toLowerCase() !== name.toLowerCase() || name === "В процессе определения...") {
-          childName = childCand;
-        }
-      }
-    }
-
-    // Generic short-message name parser fallback (e.g. "Настя, англ")
-    if ((name === "В процессе определения..." || childName === "Не указано") && !isParentIntro && !parentMatch) {
-      const words = lastUserMsg.split(/[^a-zа-яё\-]+/i).filter(w => w.length >= 2);
-      const potentialName = words.find(w => !nameExclusions.includes(w.toLowerCase()));
-      if (potentialName) {
-        const capitalized = potentialName.charAt(0).toUpperCase() + potentialName.slice(1).toLowerCase();
-        if (isAskingParentName && name === "В процессе определения...") {
-          name = capitalized;
-        } else if (isAskingChildName && childName === "Не указано") {
-          childName = capitalized;
-        }
-      }
-    }
-
-    // First user message single word detection (e.g. user just starts by sending "Давид")
-    const userMsgsList = messages.filter(m => m.sender === "user");
-    if ((name === "В процессе определения..." || name === "Ожидание диалога...") && userMsgsList.length <= 1 && isSingleWord && !nameExclusions.includes(cleanMsg.toLowerCase())) {
-      name = cleanMsg.charAt(0).toUpperCase() + cleanMsg.slice(1).toLowerCase();
-    }
-
-    // Scan all model messages in history for name addressing patterns (e.g. "Спасибо, Давид!" or "Отлично, Давид!")
-    // IMPORTANT: Skip if the detected name matches the child's name (prevents AI mistake of addressing parent by child's name)
-    for (const msg of messages) {
-      if (msg.sender === "model") {
-        const addressMatch = msg.text.match(/(?:Спасибо|Отлично|Здравствуйте|Привет|Очень приятно|Рад познакомить|Рада познакомить|Приветствую),\s+([А-ЯЁA-Zа-яёa-z\-]+)/i);
-        if (addressMatch && addressMatch[1]) {
-          const cand = addressMatch[1].trim().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g, "");
-          if (cand.length >= 2 && !nameExclusions.includes(cand.toLowerCase())) {
-            const candNormalized = cand.charAt(0).toUpperCase() + cand.slice(1).toLowerCase();
-            // Don't set parent name if it matches the child's name (AI may have confused them)
-            if (childName !== "Не указано" && candNormalized.toLowerCase() === childName.toLowerCase()) {
-              continue;
-            }
-            name = candNormalized;
-            break;
-          }
-        }
-      }
-    }
-
-    // Detect child age (supports both digits and Russian number words)
-    const numberWords: Record<string, number> = {
-      "один": 1, "одного": 1, "два": 2, "двух": 2, "три": 3, "трёх": 3, "трех": 3,
-      "четыре": 4, "четырёх": 4, "четырех": 4, "пять": 5, "пяти": 5,
-      "шесть": 6, "шести": 6, "семь": 7, "семи": 7, "восемь": 8, "восьми": 8,
-      "девять": 9, "девяти": 9, "десять": 10, "десяти": 10,
-      "одиннадцать": 11, "одиннадцати": 11, "двенадцать": 12, "двенадцати": 12,
-      "тринадцать": 13, "тринадцати": 13, "четырнадцать": 14, "четырнадцати": 14,
-      "пятнадцать": 15, "пятнадцати": 15, "шестнадцать": 16, "семнадцать": 17,
-      "восемнадцать": 18
-    };
-
-    // Try digit-based age detection first
-    const ageMatch = lastUserMsg.match(/(\d+)\s*(?:лет|года|мес)/i);
-    if (ageMatch) {
-      age = `${ageMatch[1]} лет`;
-    } else if (questionText.includes("сколько лет") || questionText.includes("возраст") || questionText.includes("сколько ему") || questionText.includes("сколько ей")) {
-      const numMatch = lastUserMsg.match(/\b(\d{1,2})\b/);
-      if (numMatch) {
-        age = `${numMatch[1]} лет`;
-      } else {
-        // Try word-based age detection (e.g. "десять", "семь")
-        const lowerMsg = lastUserMsg.toLowerCase().trim();
-        for (const [word, num] of Object.entries(numberWords)) {
-          if (lowerMsg.includes(word)) {
-            age = `${num} лет`;
-            break;
-          }
-        }
-      }
-    } else {
-      // Even without context question, try to detect standalone word numbers as age
-      const lowerMsg = lastUserMsg.toLowerCase().trim();
-      const singleWordMsg = lowerMsg.replace(/[^а-яёa-z0-9]/gi, "");
-      if (numberWords[singleWordMsg] !== undefined) {
-        age = `${numberWords[singleWordMsg]} лет`;
-      }
-    }
 
     // Detect core objection
     if (lastUserMsg.includes("дорог") || lastUserMsg.includes("тенге") || lastUserMsg.includes("тг") || lastUserMsg.includes("цена") || lastUserMsg.includes("стоит")) {
@@ -273,33 +118,27 @@ export default function AIAgentChat() {
       objection = "Мотивация ребенка 🧸";
     } else if (lastUserMsg.includes("подума") || lastUserMsg.includes("советов")) {
       objection = "Сомнения / Подумаю 🧠";
-    } else if (lastUserMsg.includes("робот") || lastUserMsg.includes("ии") || lastUserMsg.includes("глюч") || lastUserMsg.includes("галлюцина")) {
-      objection = "Страх технологий 🤖";
     }
 
+    // Detect booking confirmation from bot's latest response
     const lastModelResponse = [...messages].reverse().find(m => m.sender === "model")?.text.toLowerCase() || "";
     const confirmationKeywords = [
       "записали", "запишем", "записал", "записала", "записан", "записаны",
       "забронировал", "забронировали", "забронируем", "забронировано",
-      "подтвердил", "подтвердили", "подтверждено", "подтверждена", "подтверждаю",
-      "внесли", "внес", "внесла", "внесено",
-      "добавили", "добавил", "добавила", "добавлено",
-      "жду вас", "встречу", "ждем вас"
+      "жду вас", "встречу", "ждем вас", "до встречи"
     ];
     const exclusionKeywords = [
-      "как вас зовут", "как зовут", "сколько лет", "сколько ему", "сколько ей",
-      "хотите", "можем", "удобн", "когда", "какой", "какие", "выходн", "будн", "выберем", "выберите", "предлагаю"
+      "как вас зовут", "как зовут", "сколько лет",
+      "хотите", "можем", "удобн", "когда", "какой"
     ];
     const hasExclusions = exclusionKeywords.some(ex => lastModelResponse.includes(ex));
 
     if (confirmationKeywords.some(keyword => lastModelResponse.includes(keyword)) && !hasExclusions) {
       status = "Записан на пробный! ✅";
     }
+
     setCrmData(prev => ({
       ...prev,
-      parentName: name,
-      childName: childName,
-      childAge: age,
       detectedObjection: objection,
       bookingStatus: status
     }));
@@ -343,6 +182,17 @@ export default function AIAgentChat() {
       }
 
       const data = await response.json();
+
+      // Update CRM from server-side Extraction LLM data
+      if (data.extractedData) {
+        const ed = data.extractedData;
+        setCrmData(prev => ({
+          ...prev,
+          parentName: ed.par_name || prev.parentName,
+          childName: ed.child_name || prev.childName,
+          childAge: ed.age ? `${ed.age} лет` : prev.childAge,
+        }));
+      }
 
       setMessages((prev) => [
         ...prev,

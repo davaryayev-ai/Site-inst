@@ -166,128 +166,87 @@ export default async function handler(req: any, res: any) {
       content: m.text,
     }));
 
-    // Request completion from OpenAI gpt-4o-mini
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: systemInstruction },
-        ...formattedMessages,
-      ],
-      temperature: 0.5,
-      max_tokens: 500,
-    });
+    // ============================================================
+    // STEP 1: EXTRACTION LLM — extract structured variables
+    // ============================================================
+    const extractionPrompt = `Ты — парсер данных. Проанализируй переписку и извлеки данные клиента.
 
-    let replyText = response.choices[0].message.content || "Извините, произошла ошибка генерации ответа. Пожалуйста, попробуйте еще раз.";
+ПРАВИЛА:
+- par_name: Имя РОДИТЕЛЯ (того, кто пишет). Извлекай из "Меня зовут X", "Я — X", или если бот спросил "Как обращаться/как зовут вас?" — следующее сообщение пользователя это имя родителя.
+- child_name: Имя РЕБЕНКА. Извлекай из "ребенка зовут X", "дочь/сын X", или если бот спросил "Как зовут ребенка?" — следующее сообщение это имя ребенка.
+- age: Возраст ребенка (только число). Из "X лет", "X года", или число в ответ на "сколько лет". Слова тоже считай: "десять"=10, "семь"=7 и т.д.
+- direction: Одно из: "английский", "программирование", "робототехника", "подготовка к школе". По словам пользователя.
+
+НЕ ПУТАЙ имя родителя с именем ребенка!
+Верни ТОЛЬКО JSON без markdown. Неизвестные поля = null.
+Пример: {"par_name":"Давид","child_name":"Настя","age":10,"direction":"английский"}`;
+
+    // Run extraction and main AI in PARALLEL
+    const [extractionResponse, mainResponse] = await Promise.all([
+      openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: extractionPrompt },
+          ...formattedMessages,
+        ],
+        temperature: 0,
+        max_tokens: 150,
+        response_format: { type: "json_object" },
+      }),
+      openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemInstruction },
+          ...formattedMessages,
+        ],
+        temperature: 0.5,
+        max_tokens: 500,
+      }),
+    ]);
+
+    // Parse extracted data
+    let extractedData = { par_name: null as string | null, child_name: null as string | null, age: null as number | null, direction: null as string | null };
+    try {
+      const parsed = JSON.parse(extractionResponse.choices[0].message.content || "{}");
+      extractedData = {
+        par_name: parsed.par_name || null,
+        child_name: parsed.child_name || null,
+        age: parsed.age ? Number(parsed.age) : null,
+        direction: parsed.direction || null,
+      };
+    } catch (e) {
+      console.error("Extraction LLM parse error:", e);
+    }
+
+    let replyText = mainResponse.choices[0].message.content || "Извините, произошла ошибка. Попробуйте еще раз.";
 
     // ============================================================
-    // PROGRAMMATIC DATA COMPLETENESS CHECK (SAFETY NET)
-    // If AI tries to confirm booking but data is incomplete,
-    // replace response with a question about missing data.
-    // This is a CODE-LEVEL guarantee the AI cannot bypass.
+    // STEP 3: PROGRAMMATIC BOOKING GUARD using extracted variables
     // ============================================================
-    // Only match REAL booking confirmations, not simple acknowledgements like "Записала, Давид!"
-    const bookingWithContext = /(?:записали|записала|записал|запишем|забронировали|забронировала|забронируем)\s+(?:на|вас|ваш|вашего|тебя|ребенка|ребёнка)/i;
-    const confirmationPhrases = /(?:подтвержда|ждем вас|ждём вас|жду вас|встретим|до встречи|увидимся|приходите на)/i;
-    const isBookingConfirmation = bookingWithContext.test(replyText) || confirmationPhrases.test(replyText);
+    const bookingPatterns = /(?:записали|записала|записал|запишем|забронировали|забронировала|забронируем)\s+(?:на|вас|ваш|вашего|тебя|ребенка|ребёнка)/i;
+    const confirmPhrases = /(?:подтвержда|ждем вас|ждём вас|жду вас|встретим|до встречи|увидимся|приходите на)/i;
+    const isBookingAttempt = bookingPatterns.test(replyText) || confirmPhrases.test(replyText);
 
-    if (isBookingConfirmation) {
-      const allText = messages.map((m: any) => m.text).join(" ");
-      const userTexts = messages.filter((m: any) => m.sender === "user").map((m: any) => m.text);
-      const modelTexts = messages.filter((m: any) => m.sender === "model").map((m: any) => m.text);
-      const allUserText = userTexts.join(" ").toLowerCase();
-      const allModelText = modelTexts.join(" ").toLowerCase();
-
-      // Check parent name: search USER messages ONLY to avoid matching bot's "Я — ИИ-ассистент"
-      const allUserTextRaw = userTexts.join(" ");
-      const parentIntro = allUserTextRaw.match(/(?:меня зовут|мое имя)\s+([а-яёa-z]+)/i);
-      const botAddressed = allModelText.match(/(?:спасибо|отлично|здравствуйте|привет|хорошо|записала),?\s+([а-яёa-z]+)/i);
-      
-      // Context-aware: if bot asked "обращаться/как зовут" and user replied with a name
-      let contextParentName = false;
-      for (let i = 0; i < messages.length - 1; i++) {
-        const msg = messages[i];
-        const nextMsg = messages[i + 1];
-        if (msg.sender === "model" && nextMsg.sender === "user") {
-          const q = msg.text.toLowerCase();
-          if (q.includes("обращаться") || q.includes("как вас зовут") || q.includes("ваше имя")) {
-            const reply = nextMsg.text.trim();
-            if (reply.length >= 2 && reply.length <= 30 && /^[а-яёa-z\s-]+$/i.test(reply)) {
-              contextParentName = true;
-            }
-          }
-        }
-      }
-      
-      const hasParentName = !!(parentIntro || botAddressed || contextParentName);
-
-      const childNamePatterns = [
-        /(?:ребенка|ребёнка|дочь|дочка|дочку|сын|сына)\s+(?:зовут\s+)?([а-яёa-z]+)/i,
-        /зовут\s+(?:моего\s+(?:ребенка|ребёнка|сына|дочь|дочку)\s+)?([а-яёa-z]+)/i
-      ];
-      let hasChildName = false;
-      const botAskedChildName = allModelText.match(/как зовут.{0,20}(?:ребенк|дочь|дочк|сын)/i);
-      if (botAskedChildName) {
-        let foundQuestion = false;
-        for (const msg of messages) {
-          if (msg.sender === "model" && /как зовут.{0,20}(?:ребенк|дочь|дочк|сын)/i.test(msg.text.toLowerCase())) {
-            foundQuestion = true;
-          } else if (foundQuestion && msg.sender === "user") {
-            const cleanReply = msg.text.trim();
-            if (cleanReply.length >= 2 && cleanReply.length <= 30 && /^[а-яёa-z\s-]+$/i.test(cleanReply)) {
-              hasChildName = true;
-            }
-            break;
-          }
-        }
-      }
-      for (const pattern of childNamePatterns) {
-        if (pattern.test(allText)) { hasChildName = true; break; }
-      }
-
-      const ageWords = ["один","два","три","четыре","пять","шесть","семь","восемь","девять","десять","одиннадцать","двенадцать","тринадцать","четырнадцать","пятнадцать","шестнадцать","семнадцать","восемнадцать"];
-      const hasAge = /\d+\s*(?:лет|года|год|мес)/i.test(allUserText)
-        || /\b\d{1,2}\b/.test(allUserText.replace(/[^\dа-яё\s]/g, ""))
-        || ageWords.some(w => allUserText.includes(w));
-
-      const hasDirection = /английск|english|англ|программиров|scratch|python|робот|робототехник|подготовк.*школ/i.test(allUserText);
-
+    if (isBookingAttempt) {
       const missing: string[] = [];
-      if (!hasParentName) missing.push("parent_name");
-      if (!hasChildName) missing.push("child_name");
-      if (!hasAge) missing.push("child_age");
-      if (!hasDirection) missing.push("direction");
+      if (!extractedData.par_name) missing.push("parent_name");
+      if (!extractedData.child_name) missing.push("child_name");
+      if (!extractedData.age) missing.push("child_age");
+      if (!extractedData.direction) missing.push("direction");
 
       if (missing.length > 0) {
-        // Extract actual parent name for greeting
-        let detectedParentName = botAddressed?.[1] || parentIntro?.[1] || "";
-        if (!detectedParentName && contextParentName) {
-          for (let i = 0; i < messages.length - 1; i++) {
-            const msg = messages[i];
-            const nextMsg = messages[i + 1];
-            if (msg.sender === "model" && nextMsg.sender === "user") {
-              const q = msg.text.toLowerCase();
-              if (q.includes("обращаться") || q.includes("как вас зовут") || q.includes("ваше имя")) {
-                detectedParentName = nextMsg.text.trim();
-                break;
-              }
-            }
-          }
-        }
-        const greeting = detectedParentName ? `${detectedParentName.charAt(0).toUpperCase() + detectedParentName.slice(1).toLowerCase()}, ` : "";
-        
+        const greeting = extractedData.par_name ? `${extractedData.par_name}, ` : "";
         const questions: Record<string, string> = {
-          parent_name: "Как я могу к вам обращаться?",
-          child_name: "Как зовут вашего ребенка?",
-          child_age: "Сколько лет вашему ребенку?",
-          direction: "Какое направление вас интересует: английский, программирование, робототехника или подготовка к школе?"
+          parent_name: "как я могу к вам обращаться?",
+          child_name: "как зовут вашего ребенка?",
+          child_age: "сколько лет вашему ребенку?",
+          direction: "какое направление вас интересует: английский, программирование, робототехника или подготовка к школе?"
         };
-
-        const firstMissing = missing[0];
-        replyText = `${greeting}подскажите, пожалуйста, ещё кое-что. ${questions[firstMissing]}`;
+        replyText = `${greeting}подскажите, пожалуйста, ${questions[missing[0]]}`;
       }
     }
 
-    return res.status(200).json({ reply: replyText });
+    return res.status(200).json({ reply: replyText, extractedData });
   } catch (error: any) {
     console.error("Error in Vercel serverless function /api/chat:", error);
     return res.status(500).json({ error: "INTERNAL_SERVER_ERROR", message: error.message });
